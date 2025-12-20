@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OFFER</title>
+<style>
+  body { font-family: Arial; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #ccc; padding: 6px; }
+  th { background: #f2f2f2; }
+</style>
+</head>
+<body>
+
+<h1>OFFER</h1>
+<table id="table"></table>
+
+<script>
+fetch("data/offer.csv")
+  .then(r => r.text())
+  .then(t => render(t));
+
+function render(csv) {
+  const rows = csv.trim().split("\n");
+  const table = document.getElementById("table");
+
+  rows.forEach((row, i) => {
+    const tr = document.createElement("tr");
+    row.split(",").forEach(cell => {
+      const el = document.createElement(i === 0 ? "th" : "td");
+      el.textContent = cell;
+      tr.appendChild(el);
+    });
+    table.appendChild(tr);
+  });
+}
+</script>
+
+</body>
+</html>
