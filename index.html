@@ -1,25 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Real Estate Database</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>STAT311 Real Estate DB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial; margin: 40px; }
-    a { display: block; margin: 10px 0; font-size: 18px; }
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1a33;
+      --card:#111f3d;
+      --text:#e9eefc;
+      --muted:#a8b3d6;
+      --line:rgba(255,255,255,.10);
+      --accent:#4f8cff;
+      --accent2:#2ee59d;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, #162a58 0%, var(--bg) 55%) fixed;
+      color:var(--text);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 60px;}
+    .top{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:18px;
+      margin-bottom:18px;
+    }
+    .title h1{margin:0; font-size:34px; letter-spacing:.2px;}
+    .title p{margin:8px 0 0; color:var(--muted); max-width:70ch; line-height:1.5;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 12px; border:1px solid var(--line);
+      border-radius:999px; background:rgba(255,255,255,.04);
+      color:var(--muted); font-size:13px; white-space:nowrap;
+    }
+
+    .grid{
+      display:grid; grid-template-columns: 1.4fr .6fr; gap:16px;
+      margin-top:18px;
+    }
+    @media (max-width: 900px){ .grid{grid-template-columns:1fr;} }
+
+    .panel{
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border-radius:18px;
+      overflow:hidden;
+    }
+    .panel-header{
+      padding:16px 16px 0;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .panel-header h2{margin:0; font-size:16px; letter-spacing:.2px;}
+    .panel-body{padding:16px;}
+    .cards{
+      display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;
+    }
+    @media (max-width: 520px){ .cards{grid-template-columns:1fr;} }
+
+    .card{
+      border:1px solid var(--line);
+      background: rgba(17,31,61,.72);
+      border-radius:16px;
+      padding:14px;
+      display:flex; gap:12px; align-items:flex-start;
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    .card:hover{ transform: translateY(-2px); border-color: rgba(79,140,255,.45); }
+    .icon{
+      width:40px; height:40px; border-radius:12px;
+      display:grid; place-items:center;
+      background: rgba(79,140,255,.18);
+      border:1px solid rgba(79,140,255,.30);
+      flex:0 0 auto;
+      font-size:18px;
+    }
+    .card h3{margin:0; font-size:14px;}
+    .card p{margin:6px 0 0; color:var(--muted); font-size:12.5px; line-height:1.35;}
+    .card a{
+      display:inline-flex; align-items:center; gap:8px;
+      margin-top:10px;
+      color:var(--text); text-decoration:none; font-weight:600; font-size:13px;
+    }
+    .card a span{color:var(--accent)}
+    .meta{
+      display:grid; gap:10px;
+    }
+    .meta .box{
+      border:1px solid var(--line);
+      background: rgba(17,31,61,.60);
+      border-radius:16px;
+      padding:14px;
+    }
+    .meta .box h3{margin:0; font-size:14px;}
+    .meta .box p{margin:8px 0 0; color:var(--muted); font-size:12.5px; line-height:1.5;}
+    .tag{
+      display:inline-flex; align-items:center;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(46,229,157,.35);
+      background: rgba(46,229,157,.12);
+      color: var(--accent2);
+      font-weight:700; font-size:12px;
+      margin-top:10px;
+    }
+    .footer{
+      margin-top:18px; color:var(--muted); font-size:12px;
+      display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+      padding-top:14px; border-top:1px solid var(--line);
+    }
+    .footer a{color:var(--muted)}
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title">
+        <h1>Real Estate Management System</h1>
+        <p>STAT311 Project UI — CSV-based table explorer for PROPERTY, CLIENT, AGENT, LISTING, VIEWING, OFFER, and SALE.</p>
+        <div class="pill">📌 GitHub Pages • Static UI • No backend</div>
+      </div>
+      <div class="pill">🕒 Updated: <span id="updated"></span></div>
+    </div>
 
-<h1>Real Estate Management System</h1>
-<p>Select a table to view:</p>
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Database Tables</h2>
+          <div class="pill">🔎 Search inside tables</div>
+        </div>
+        <div class="panel-body">
+          <div class="cards">
+            <div class="card">
+              <div class="icon">🏠</div>
+              <div>
+                <h3>PROPERTY</h3>
+                <p>Addresses, type, rooms, area, status.</p>
+                <a href="table.html?t=property"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">👤</div>
+              <div>
+                <h3>CLIENT</h3>
+                <p>Buyer/seller contact information.</p>
+                <a href="table.html?t=client"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">🧑‍💼</div>
+              <div>
+                <h3>AGENT</h3>
+                <p>Agents, hire dates, commission rates.</p>
+                <a href="table.html?t=agent"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">📋</div>
+              <div>
+                <h3>LISTING</h3>
+                <p>Property listings with prices & dates.</p>
+                <a href="table.html?t=listing"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">👀</div>
+              <div>
+                <h3>VIEWING</h3>
+                <p>Scheduled visits between clients and agents.</p>
+                <a href="table.html?t=viewing"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">💰</div>
+              <div>
+                <h3>OFFER</h3>
+                <p>Offers, statuses, messages, timestamps.</p>
+                <a href="table.html?t=offer"><span>Open</span> →</a>
+              </div>
+            </div>
+            <div class="card">
+              <div class="icon">✅</div>
+              <div>
+                <h3>SALE</h3>
+                <p>Accepted offers converted into sales.</p>
+                <a href="table.html?t=sale"><span>Open</span> →</a>
+              </div>
+            </div>
+          </div>
 
-<a href="property.html">PROPERTY</a>
-<a href="client.html">CLIENT</a>
-<a href="agent.html">AGENT</a>
-<a href="listing.html">LISTING</a>
-<a href="viewing.html">VIEWING</a>
-<a href="offer.html">OFFER</a>
-<a href="sale.html">SALE</a>
+          <div class="footer">
+            <div>Tip: use the table search to filter quickly (e.g., “Sold”, “Ankara”, “Active”).</div>
+            <div><a href="./">Home</a></div>
+          </div>
+        </div>
+      </div>
 
+      <div class="meta">
+        <div class="box">
+          <h3>How it works</h3>
+          <p>Each table is exported from PostgreSQL as CSV and rendered in the browser with JavaScript (similar to recit9 CSV parsing idea).</p>
+          <div class="tag">CSV → HTML Table</div>
+        </div>
+        <div class="box">
+          <h3>Files expected</h3>
+          <p>Put your CSVs into a <b>data/</b> folder: <code>data/property.csv</code>, <code>data/client.csv</code>, …</p>
+          <p style="margin-top:10px;color:var(--muted)">If your CSVs are in the root, change the path in <code>table.html</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("updated").textContent =
+      new Date().toLocaleDateString("tr-TR", { year:"numeric", month:"long", day:"numeric" });
+  </script>
 </body>
 </html>
+
