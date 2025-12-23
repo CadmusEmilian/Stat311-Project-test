@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Table Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f1a33; --text:#e9eefc; --muted:#a8b3d6;
+      --line:rgba(255,255,255,.10); --accent:#4f8cff;
+      --chip:rgba(255,255,255,.06);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:Inter,system-ui,Segoe UI,Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, #162a58 0%, var(--bg) 55%) fixed;
+      color:var(--text);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:20px 16px 60px;}
+    .bar{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 14px; border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-radius:16px;
+      position: sticky; top: 12px; z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .left{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+    .title{font-weight:800; letter-spacing:.2px}
+    .chip{
+      padding:6px 10px; border-radius:999px; border:1px solid var(--line);
+      background: var(--chip); color:var(--muted); font-size:12px;
+    }
+    .search{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid var(--line); background:rgba(0,0,0,.18);
+      padding:8px 10px; border-radius:12px;
+      min-width:260px;
+    }
+    .search input{
+      width:100%; background:transparent; border:none; outline:none;
+      color:var(--text); font-size:13px;
+    }
+    .btn{
+      text-decoration:none; color:var(--text);
+      padding:8px 10px; border-radius:12px;
+      border:1px solid var(--line); background:rgba(255,255,255,.04);
+      font-weight:600; font-size:13px;
+    }
+    .btn:hover{border-color:rgba(79,140,255,.5)}
+    .panel{
+      margin-top:14px;
+      border:1px solid var(--line);
+      background: rgba(15,26,51,.55);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .table-wrap{overflow:auto;}
+    table{border-collapse:collapse; width:100%; min-width:900px;}
+    thead th{
+      position: sticky; top: 0;
+      background: rgba(10,18,32,.95);
+      border-bottom:1px solid var(--line);
+      padding:10px 10px;
+      text-align:left; font-size:12px; color:var(--muted);
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    tbody td{
+      border-top:1px solid rgba(255,255,255,.06);
+      padding:10px 10px;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    tbody tr:nth-child(even){background: rgba(255,255,255,.02);}
+    .hint{color:var(--muted); font-size:12px; padding:12px 14px; border-top:1px solid var(--line);}
+    .status{
+      display:inline-flex; align-items:center;
+      padding:4px 10px; border-radius:999px; font-size:12px; font-weight:800;
+      border:1px solid rgba(255,255,255,.14);
+    }
+    .s-Available{color:#2ee59d; background:rgba(46,229,157,.10); border-color:rgba(46,229,157,.25);}
+    .s-Active{color:#4f8cff; background:rgba(79,140,255,.10); border-color:rgba(79,140,255,.25);}
+    .s-Sold{color:#ff6b6b; background:rgba(255,107,107,.10); border-color:rgba(255,107,107,.25);}
+    .s-Under{color:#f7d046; background:rgba(247,208,70,.10); border-color:rgba(247,208,70,.25);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="left">
+        <div class="title" id="tableTitle">Table</div>
+        <div class="chip" id="rowCount">0 rows</div>
+        <div class="search">
+          <span style="color:var(--muted)">🔎</span>
+          <input id="q" placeholder="Search in table (any column)..." />
+        </div>
+      </div>
+      <div class="right" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn" href="./">← Home</a>
+        <a class="btn" id="downloadBtn" href="#" download>Download CSV</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="table-wrap">
+        <table id="tbl"></table>
+      </div>
+      <div class="hint">
+        Click a column header to sort. Search filters all columns. (Works great for Status like Available/Sold/Active.)
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FILE_MAP = {
+      property: "data/property.csv",
+      client:   "data/client.csv",
+      agent:    "data/agent.csv",
+      listing:  "data/listing.csv",
+      viewing:  "data/viewing.csv",
+      offer:    "data/offer.csv",
+      sale:     "data/sale.csv"
+    };
+
+    const params = new URLSearchParams(location.search);
+    const t = (params.get("t") || "property").toLowerCase();
+    const csvPath = FILE_MAP[t] || FILE_MAP.property;
+
+    document.getElementById("tableTitle").textContent = t.toUpperCase();
+    const downloadBtn = document.getElementById("downloadBtn");
+    downloadBtn.href = csvPath;
+    downloadBtn.download = `${t}.csv`;
+
+    let header = [];
+    let rows = [];
+    let filtered = [];
+    let sortState = { col: -1, asc: true };
+
+    fetch(csvPath)
+      .then(r => {
+        if (!r.ok) throw new Error("CSV not found: " + csvPath);
+        return r.text();
+      })
+      .then(text => {
+        const parsed = parseCSV(text);
+        header = parsed.header;
+        rows = parsed.rows;
+        filtered = rows.slice();
+        renderTable(filtered);
+        updateCount(filtered.length);
+      })
+      .catch(err => {
+        document.getElementById("tbl").innerHTML =
+          `<tr><td style="padding:14px;color:#ffb3b3">Error: ${err.message}<br>
+          Make sure CSV files exist and paths match (example: ${csvPath}).</td></tr>`;
+      });
+
+    document.getElementById("q").addEventListener("input", e => {
+      const q = e.target.value.trim().toLowerCase();
+      filtered = rows.filter(r => r.some(c => (c ?? "").toLowerCase().includes(q)));
+      if (sortState.col >= 0) filtered.sort((a,b)=>cmp(a,b,sortState.col,sortState.asc));
+      renderTable(filtered);
+      updateCount(filtered.length);
+    });
+
+    function updateCount(n){
+      document.getElementById("rowCount").textContent = `${n} rows`;
+    }
+
+    function renderTable(data){
+      const tbl = document.getElementById("tbl");
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      header.forEach((h, i) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        th.onclick = () => {
+          sortState.asc = (sortState.col === i) ? !sortState.asc : true;
+          sortState.col = i;
+          data.sort((a,b)=>cmp(a,b,i,sortState.asc));
+          renderTable(data);
+        };
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+
+      const tbody = document.createElement("tbody");
+      data.forEach(r => {
+        const tr = document.createElement("tr");
+        r.forEach((cell, idx) => {
+          const td = document.createElement("td");
+          const val = cell ?? "";
+          // Pretty status pills for common status columns
+          if (typeof val === "string" && looksLikeStatus(val)) {
+            const span = document.createElement("span");
+            span.className = "status " + statusClass(val);
+            span.textContent = val;
+            td.appendChild(span);
+          } else {
+            td.textContent = val;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      tbl.innerHTML = "";
+      tbl.appendChild(thead);
+      tbl.appendChild(tbody);
+    }
+
+    function cmp(a,b,i,asc){
+      const A = (a[i] ?? "").toString();
+      const B = (b[i] ?? "").toString();
+      // numeric compare if both look numeric
+      const nA = Number(A.replace(/[^0-9.\-]/g,""));
+      const nB = Number(B.replace(/[^0-9.\-]/g,""));
+      const bothNum = !Number.isNaN(nA) && !Number.isNaN(nB) && A.trim()!=="" && B.trim()!=="";
+      const res = bothNum ? (nA - nB) : A.localeCompare(B, undefined, {numeric:true, sensitivity:"base"});
+      return asc ? res : -res;
+    }
+
+    function looksLikeStatus(v){
+      const s = v.toLowerCase();
+      return ["available","sold","active","expired","cancelled","rejected","accepted","pending","withdrawn","under contract","off market"]
+        .some(x => s === x);
+    }
+    function statusClass(v){
+      const s = v.toLowerCase();
+      if (s === "available") return "s-Available";
+      if (s === "active" || s === "pending") return "s-Active";
+      if (s === "sold" || s === "accepted") return "s-Sold";
+      if (s.startsWith("under")) return "s-Under";
+      return "";
+    }
+
+    // Minimal CSV parser with quoted fields support
+    function parseCSV(text){
+      const lines = text.trim().split(/\r?\n/);
+      const header = splitCSVLine(lines[0]);
+      const rows = [];
+      for(let i=1;i<lines.length;i++){
+        const line = lines[i];
+        if (!line.trim()) continue;
+        const cols = splitCSVLine(line);
+        // pad if short
+        while(cols.length < header.length) cols.push("");
+        rows.push(cols);
+      }
+      return { header, rows };
+    }
+    function splitCSVLine(line){
+      const out = [];
+      let cur = "";
+      let inQ = false;
+      for(let i=0;i<line.length;i++){
+        const ch = line[i];
+        if (ch === '"'){ inQ = !inQ; continue; }
+        if (ch === "," && !inQ){ out.push(cur); cur=""; }
+        else cur += ch;
+      }
+      out.push(cur);
+      return out.map(s => s.trim());
+    }
+  </script>
+</body>
+</html>
