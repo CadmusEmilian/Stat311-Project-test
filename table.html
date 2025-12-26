@@ -48,7 +48,6 @@
     .btn-primary { background: rgba(79,140,255,.15); border-color: rgba(79,140,255,.4); color: #8ab4ff; }
     .btn-primary:hover { background: rgba(79,140,255,.25); }
     .btn-danger { color: var(--danger); border-color: rgba(255,107,107,.3); background: rgba(255,107,107,.1); }
-    .btn-danger:hover { background: rgba(255,107,107,.2); }
 
     /* Table Container */
     .panel{
@@ -69,13 +68,21 @@
       padding:12px 10px;
       text-align:left; font-size:13px; color:var(--accent);
       white-space:nowrap;
+      cursor: pointer; /* Clickable */
+      user-select: none;
+      transition: background 0.2s;
     }
+    thead th:hover { background: #1c2a4d; }
     
-    /* Filter Inputs in Header */
+    /* Sort Icons */
+    .sort-icon { margin-left: 6px; font-size: 11px; opacity: 0.7; }
+    
+    /* Filter Inputs */
     .filter-row th {
-      top: 45px; /* Height of the first header row */
+      top: 45px;
       background: #0f182d;
       padding: 6px;
+      cursor: default; /* Filter row is not sortable */
     }
     .filter-input {
       width: 100%;
@@ -100,13 +107,11 @@
     }
     tbody tr:hover { background: rgba(255,255,255,.03); }
     
-    /* Input Mode (Editing) */
     .edit-input {
       background: rgba(0,0,0,0.4); border: 1px solid var(--accent);
       color: white; padding: 6px; border-radius: 4px; width: 100%;
     }
 
-    /* Actions Column */
     .actions { display: flex; gap: 6px; }
     .icon-btn {
       padding: 6px; border-radius: 6px; border:none; cursor: pointer;
@@ -116,12 +121,10 @@
     .btn-delete { background: rgba(255,107,107,.15); color: var(--danger); }
     .btn-save { background: rgba(46,229,157,.15); color: var(--success); }
     .btn-cancel { background: rgba(255,255,255,.1); color: var(--muted); }
-    
     .icon-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
 
     .status-badge {
-      padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;
-      text-transform: uppercase;
+      padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;
     }
   </style>
 </head>
@@ -152,7 +155,7 @@
     </div>
     
     <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:center;">
-      <i class="fa-solid fa-info-circle"></i> Note: This is a static page. Edits are temporary until you click "Download CSV" and manually overwrite the file in your project folder.
+      <i class="fa-solid fa-info-circle"></i> Click headers to Sort. Use filters to Search. Edits happen in memory; click "Download CSV" to save.
     </div>
   </div>
 
@@ -175,71 +178,79 @@
     document.getElementById("tableTitle").textContent = tableName.toUpperCase();
     document.title = `${tableName.toUpperCase()} - Manager`;
 
-    // --- State Management ---
+    // --- State ---
     let originalHeader = [];
-    let tableData = []; // [{col1: val, col2: val, _id: 1}, ...]
-    let filters = {};   // { colIndex: "search term" }
-    let editingRowId = null; 
+    let tableData = []; 
+    let filters = {};
+    let editingRowId = null;
+    let sortState = { colIdx: -1, asc: true }; // New Sorting State
 
-    // --- Initialization ---
+    // --- Init ---
     fetch(csvPath)
       .then(r => {
         if(!r.ok) throw new Error("File not found");
         return r.text();
       })
-      .then(csvText => {
-        parseAndInit(csvText);
-      })
+      .then(csvText => parseAndInit(csvText))
       .catch(err => alert("Error: " + err.message));
 
-    // --- CSV Parsing ---
     function parseAndInit(text) {
       const lines = text.trim().split(/\r?\n/);
       if (lines.length === 0) return;
 
       originalHeader = splitCSV(lines[0]);
       
-      // Convert to Objects
       tableData = [];
       for(let i=1; i<lines.length; i++) {
         if(!lines[i].trim()) continue;
         const vals = splitCSV(lines[i]);
-        const rowObj = { _id: Date.now() + Math.random() }; // Unique ID for frontend tracking
+        const rowObj = { _id: Date.now() + Math.random() };
         originalHeader.forEach((h, idx) => {
           rowObj[idx] = vals[idx] || "";
         });
         tableData.push(rowObj);
       }
-
       renderHeader();
       renderFilters();
       renderBody();
     }
 
-    // --- Render Functions ---
+    // --- Render ---
     function renderHeader() {
       const tr = document.getElementById("headerRow");
       tr.innerHTML = "";
       
-      // Data Columns
-      originalHeader.forEach(h => {
+      // Data Columns (Sortable)
+      originalHeader.forEach((h, idx) => {
         const th = document.createElement("th");
-        th.textContent = h;
+        th.onclick = () => handleSort(idx); // Sort Trigger
+        
+        // Header Text + Sort Icon
+        let sortIcon = "";
+        if (sortState.colIdx === idx) {
+          sortIcon = sortState.asc 
+            ? ' <i class="fa-solid fa-arrow-up-long sort-icon"></i>' 
+            : ' <i class="fa-solid fa-arrow-down-long sort-icon"></i>';
+        } else {
+          sortIcon = ' <i class="fa-solid fa-sort sort-icon" style="opacity:0.2"></i>';
+        }
+        
+        th.innerHTML = h + sortIcon;
         tr.appendChild(th);
       });
 
-      // Actions Column
+      // Actions Column (Not Sortable)
       const thAction = document.createElement("th");
       thAction.textContent = "Actions";
       thAction.style.width = "100px";
       thAction.style.textAlign = "right";
+      thAction.style.cursor = "default";
       tr.appendChild(thAction);
     }
 
     function renderFilters() {
       const tr = document.getElementById("filterRow");
       tr.innerHTML = "";
-
       originalHeader.forEach((h, idx) => {
         const th = document.createElement("th");
         const input = document.createElement("input");
@@ -249,11 +260,11 @@
           filters[idx] = e.target.value.toLowerCase();
           renderBody();
         };
+        // Stop sort click from propagating
+        input.onclick = (e) => e.stopPropagation();
         th.appendChild(input);
         tr.appendChild(th);
       });
-
-      // Empty cell for actions column filter
       tr.appendChild(document.createElement("th"));
     }
 
@@ -261,7 +272,7 @@
       const tbody = document.getElementById("tableBody");
       tbody.innerHTML = "";
 
-      // Filter Logic
+      // 1. Filter
       const filtered = tableData.filter(row => {
         return Object.keys(filters).every(colIdx => {
           const val = (row[colIdx] || "").toString().toLowerCase();
@@ -272,11 +283,11 @@
 
       document.getElementById("recordCount").textContent = `${filtered.length} rows`;
 
+      // 2. Render
       filtered.forEach(row => {
         const tr = document.createElement("tr");
         const isEditing = (row._id === editingRowId);
 
-        // Columns
         originalHeader.forEach((colName, colIdx) => {
           const td = document.createElement("td");
           const val = row[colIdx];
@@ -288,7 +299,6 @@
             input.dataset.colIdx = colIdx;
             td.appendChild(input);
           } else {
-            // Normal View (with Status pills)
             if (looksLikeStatus(val)) {
               const span = document.createElement("span");
               span.className = "status-badge";
@@ -302,23 +312,20 @@
           tr.appendChild(td);
         });
 
-        // Action Buttons
         const tdAction = document.createElement("td");
         tdAction.className = "actions";
         tdAction.style.justifyContent = "flex-end";
 
         if (isEditing) {
-          // Save Button
-          const btnSave = createIconBtn("fa-check", "btn-save", () => saveRow(row._id, tr));
-          // Cancel Button
-          const btnCancel = createIconBtn("fa-xmark", "btn-cancel", () => cancelEdit());
-          tdAction.append(btnSave, btnCancel);
+          tdAction.append(
+            createIconBtn("fa-check", "btn-save", () => saveRow(row._id, tr)),
+            createIconBtn("fa-xmark", "btn-cancel", () => cancelEdit())
+          );
         } else {
-          // Edit Button
-          const btnEdit = createIconBtn("fa-pen", "btn-edit", () => startEdit(row._id));
-          // Delete Button
-          const btnDel = createIconBtn("fa-trash", "btn-delete", () => deleteRow(row._id));
-          tdAction.append(btnEdit, btnDel);
+          tdAction.append(
+            createIconBtn("fa-pen", "btn-edit", () => startEdit(row._id)),
+            createIconBtn("fa-trash", "btn-delete", () => deleteRow(row._id))
+          );
         }
 
         tr.appendChild(tdAction);
@@ -326,64 +333,73 @@
       });
     }
 
-    // --- CRUD Logic ---
-    
+    // --- Sort Logic ---
+    function handleSort(idx) {
+      if (sortState.colIdx === idx) {
+        sortState.asc = !sortState.asc; // Toggle
+      } else {
+        sortState.colIdx = idx;
+        sortState.asc = true; // Default new col to asc
+      }
+
+      // Sort the actual data array
+      tableData.sort((a, b) => {
+        const valA = (a[idx] || "").toString();
+        const valB = (b[idx] || "").toString();
+
+        // Check if numeric
+        const nA = Number(valA.replace(/[^0-9.-]/g,""));
+        const nB = Number(valB.replace(/[^0-9.-]/g,""));
+        const isNum = !isNaN(nA) && !isNaN(nB) && valA.trim() !== "" && valB.trim() !== "";
+
+        if(isNum) {
+           return sortState.asc ? (nA - nB) : (nB - nA);
+        } else {
+           // String compare (case insensitive + numeric aware for "Item 1, Item 10")
+           return sortState.asc 
+             ? valA.localeCompare(valB, undefined, {numeric: true, sensitivity: 'base'})
+             : valB.localeCompare(valA, undefined, {numeric: true, sensitivity: 'base'});
+        }
+      });
+
+      renderHeader(); // Update arrows
+      renderBody();   // Update rows
+    }
+
+    // --- CRUD ---
     function addNewRow() {
       const newRow = { _id: Date.now() };
       originalHeader.forEach((h, i) => newRow[i] = "");
-      
-      // Add to top
       tableData.unshift(newRow);
-      
-      // Enter edit mode immediately
       editingRowId = newRow._id;
-      
-      // Clear filters so user can see the new row
-      filters = {}; 
+      filters = {}; // reset filters to see new row
       document.querySelectorAll(".filter-input").forEach(i => i.value = "");
-      
       renderBody();
     }
 
-    function startEdit(id) {
-      editingRowId = id;
-      renderBody();
-    }
-
-    function cancelEdit() {
-      editingRowId = null;
-      renderBody();
-    }
-
-    function saveRow(id, trElement) {
-      const inputs = trElement.querySelectorAll("input.edit-input");
-      const targetRow = tableData.find(r => r._id === id);
-      
-      inputs.forEach(input => {
-        const colIdx = input.dataset.colIdx;
-        targetRow[colIdx] = input.value; // Update data
-      });
-
-      editingRowId = null;
-      renderBody();
-    }
-
+    function startEdit(id) { editingRowId = id; renderBody(); }
+    function cancelEdit() { editingRowId = null; renderBody(); }
     function deleteRow(id) {
-      if(!confirm("Are you sure you want to delete this row?")) return;
+      if(!confirm("Delete this row?")) return;
       tableData = tableData.filter(r => r._id !== id);
       renderBody();
     }
-
-    // --- Helpers ---
-
-    function createIconBtn(iconClass, btnClass, onClick) {
-      const btn = document.createElement("button");
-      btn.className = `icon-btn ${btnClass}`;
-      btn.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
-      btn.onclick = onClick;
-      return btn;
+    function saveRow(id, tr) {
+      const inputs = tr.querySelectorAll("input.edit-input");
+      const targetRow = tableData.find(r => r._id === id);
+      inputs.forEach(input => targetRow[input.dataset.colIdx] = input.value);
+      editingRowId = null;
+      renderBody();
     }
 
+    // --- Utils ---
+    function createIconBtn(icon, cls, cb) {
+      const btn = document.createElement("button");
+      btn.className = `icon-btn ${cls}`;
+      btn.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+      btn.onclick = cb;
+      return btn;
+    }
     function getStatusStyle(status) {
       const s = status.toLowerCase();
       if(s === 'active' || s === 'available') return "background: rgba(46,229,157,.15); color: #2ee59d; border: 1px solid rgba(46,229,157,.3);";
@@ -391,17 +407,13 @@
       if(s.includes('under') || s === 'pending') return "background: rgba(255,200,87,.15); color: #ffc857; border: 1px solid rgba(255,200,87,.3);";
       return "background: rgba(255,255,255,.1); color: #ccc;";
     }
-
     function looksLikeStatus(val) {
       const s = (val||"").toString().toLowerCase();
       return ['active','sold','pending','available','rejected','accepted'].some(x => s.includes(x));
     }
-
-    // Simple CSV Parser (ignores commas inside quotes)
     function splitCSV(str) {
       const arr = [];
-      let quote = false;
-      let col = "";
+      let quote = false, col = "";
       for(let c of str) {
         if(c === '"') { quote = !quote; continue; }
         if(c === ',' && !quote) { arr.push(col); col = ""; continue; }
@@ -410,30 +422,21 @@
       arr.push(col);
       return arr.map(x => x.trim());
     }
-
-    // --- Export CSV ---
     function downloadCSV() {
-      // 1. Header
       let csvContent = originalHeader.join(",") + "\n";
-
-      // 2. Rows
       tableData.forEach(row => {
         const rowArr = originalHeader.map((_, idx) => {
           let val = row[idx] || "";
-          // Wrap in quotes if it contains a comma
           if (val.includes(",")) val = `"${val}"`;
           return val;
         });
         csvContent += rowArr.join(",") + "\n";
       });
-
-      // 3. Create Blob and Download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${tableName}_updated.csv`);
-      link.style.visibility = 'hidden';
+      link.href = url;
+      link.download = `${tableName}_updated.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
