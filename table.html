@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gelişmiş Tablo Yöneticisi</title>
+  <title>Advanced Table Manager</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
@@ -129,13 +129,13 @@
   <div class="wrap">
     <div class="bar">
       <div class="left">
-        <div class="title" id="tableTitle">YÜKLENİYOR...</div>
-        <span style="color:var(--muted); font-size:13px;" id="recordCount">0 kayıt</span>
+        <div class="title" id="tableTitle">LOADING...</div>
+        <span style="color:var(--muted); font-size:13px;" id="recordCount">0 rows</span>
       </div>
       <div class="right">
-        <button class="btn" onclick="addNewRow()"><i class="fa-solid fa-plus"></i> Yeni Ekle</button>
-        <button class="btn btn-primary" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> CSV Olarak İndir (Kaydet)</button>
-        <a class="btn" href="./"><i class="fa-solid fa-home"></i> Ana Menü</a>
+        <button class="btn" onclick="addNewRow()"><i class="fa-solid fa-plus"></i> Add New</button>
+        <button class="btn btn-primary" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> Download CSV (Save)</button>
+        <a class="btn" href="./"><i class="fa-solid fa-home"></i> Home</a>
       </div>
     </div>
 
@@ -152,12 +152,12 @@
     </div>
     
     <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:center;">
-      <i class="fa-solid fa-info-circle"></i> Not: Bu statik bir sitedir. Değişiklik yaptıktan sonra "CSV İndir" butonuna basıp dosyayı projenizdeki <b>data/</b> klasörüne manuel olarak kaydetmelisiniz.
+      <i class="fa-solid fa-info-circle"></i> Note: This is a static page. Edits are temporary until you click "Download CSV" and manually overwrite the file in your project folder.
     </div>
   </div>
 
   <script>
-    // --- Yapılandırma ---
+    // --- Configuration ---
     const FILE_MAP = {
       property: "data/property.csv",
       client:   "data/client.csv",
@@ -173,33 +173,33 @@
     const csvPath = FILE_MAP[tableName] || FILE_MAP.property;
 
     document.getElementById("tableTitle").textContent = tableName.toUpperCase();
-    document.title = `${tableName.toUpperCase()} - Yönetici`;
+    document.title = `${tableName.toUpperCase()} - Manager`;
 
-    // --- State (Durum Yönetimi) ---
+    // --- State Management ---
     let originalHeader = [];
     let tableData = []; // [{col1: val, col2: val, _id: 1}, ...]
-    let filters = {};   // { colIndex: "arama terimi" }
+    let filters = {};   // { colIndex: "search term" }
     let editingRowId = null; 
 
-    // --- Başlatma ---
+    // --- Initialization ---
     fetch(csvPath)
       .then(r => {
-        if(!r.ok) throw new Error("Dosya bulunamadı");
+        if(!r.ok) throw new Error("File not found");
         return r.text();
       })
       .then(csvText => {
         parseAndInit(csvText);
       })
-      .catch(err => alert("Hata: " + err.message));
+      .catch(err => alert("Error: " + err.message));
 
-    // --- CSV Parse İşlemleri ---
+    // --- CSV Parsing ---
     function parseAndInit(text) {
       const lines = text.trim().split(/\r?\n/);
       if (lines.length === 0) return;
 
       originalHeader = splitCSV(lines[0]);
       
-      // Veriyi objeye çevir
+      // Convert to Objects
       tableData = [];
       for(let i=1; i<lines.length; i++) {
         if(!lines[i].trim()) continue;
@@ -216,7 +216,7 @@
       renderBody();
     }
 
-    // --- Render (Çizim) Fonksiyonları ---
+    // --- Render Functions ---
     function renderHeader() {
       const tr = document.getElementById("headerRow");
       tr.innerHTML = "";
@@ -230,7 +230,7 @@
 
       // Actions Column
       const thAction = document.createElement("th");
-      thAction.textContent = "İşlemler";
+      thAction.textContent = "Actions";
       thAction.style.width = "100px";
       thAction.style.textAlign = "right";
       tr.appendChild(thAction);
@@ -244,7 +244,7 @@
         const th = document.createElement("th");
         const input = document.createElement("input");
         input.className = "filter-input";
-        input.placeholder = `${h} ara...`;
+        input.placeholder = `Search ${h}...`;
         input.oninput = (e) => {
           filters[idx] = e.target.value.toLowerCase();
           renderBody();
@@ -261,7 +261,7 @@
       const tbody = document.getElementById("tableBody");
       tbody.innerHTML = "";
 
-      // Filtreleme Mantığı
+      // Filter Logic
       const filtered = tableData.filter(row => {
         return Object.keys(filters).every(colIdx => {
           const val = (row[colIdx] || "").toString().toLowerCase();
@@ -270,13 +270,13 @@
         });
       });
 
-      document.getElementById("recordCount").textContent = `${filtered.length} kayıt`;
+      document.getElementById("recordCount").textContent = `${filtered.length} rows`;
 
       filtered.forEach(row => {
         const tr = document.createElement("tr");
         const isEditing = (row._id === editingRowId);
 
-        // Sütunlar
+        // Columns
         originalHeader.forEach((colName, colIdx) => {
           const td = document.createElement("td");
           const val = row[colIdx];
@@ -285,10 +285,10 @@
             const input = document.createElement("input");
             input.className = "edit-input";
             input.value = val;
-            input.dataset.colIdx = colIdx; // Hangi sütun olduğunu sakla
+            input.dataset.colIdx = colIdx;
             td.appendChild(input);
           } else {
-            // Normal Görünüm (Status renklendirme vb.)
+            // Normal View (with Status pills)
             if (looksLikeStatus(val)) {
               const span = document.createElement("span");
               span.className = "status-badge";
@@ -302,21 +302,21 @@
           tr.appendChild(td);
         });
 
-        // Aksiyon Butonları
+        // Action Buttons
         const tdAction = document.createElement("td");
         tdAction.className = "actions";
         tdAction.style.justifyContent = "flex-end";
 
         if (isEditing) {
-          // Kaydet Butonu
+          // Save Button
           const btnSave = createIconBtn("fa-check", "btn-save", () => saveRow(row._id, tr));
-          // İptal Butonu
+          // Cancel Button
           const btnCancel = createIconBtn("fa-xmark", "btn-cancel", () => cancelEdit());
           tdAction.append(btnSave, btnCancel);
         } else {
-          // Düzenle Butonu
+          // Edit Button
           const btnEdit = createIconBtn("fa-pen", "btn-edit", () => startEdit(row._id));
-          // Sil Butonu
+          // Delete Button
           const btnDel = createIconBtn("fa-trash", "btn-delete", () => deleteRow(row._id));
           tdAction.append(btnEdit, btnDel);
         }
@@ -326,20 +326,19 @@
       });
     }
 
-    // --- CRUD Mantığı ---
+    // --- CRUD Logic ---
     
     function addNewRow() {
-      // Boş bir satır oluştur
       const newRow = { _id: Date.now() };
       originalHeader.forEach((h, i) => newRow[i] = "");
       
-      // Başa ekle
+      // Add to top
       tableData.unshift(newRow);
       
-      // Direkt düzenleme moduna al
+      // Enter edit mode immediately
       editingRowId = newRow._id;
       
-      // Filtreleri temizle ki yeni satır görünsün
+      // Clear filters so user can see the new row
       filters = {}; 
       document.querySelectorAll(".filter-input").forEach(i => i.value = "");
       
@@ -352,8 +351,6 @@
     }
 
     function cancelEdit() {
-      // Eğer yeni eklenmiş boş bir satırsa ve iptal edildiyse, satırı silmeli miyiz? 
-      // Basitlik adına sadece düzenlemeyi kapatıyoruz, eski değerler geri geliyor.
       editingRowId = null;
       renderBody();
     }
@@ -364,7 +361,7 @@
       
       inputs.forEach(input => {
         const colIdx = input.dataset.colIdx;
-        targetRow[colIdx] = input.value; // Veriyi güncelle
+        targetRow[colIdx] = input.value; // Update data
       });
 
       editingRowId = null;
@@ -372,12 +369,12 @@
     }
 
     function deleteRow(id) {
-      if(!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
+      if(!confirm("Are you sure you want to delete this row?")) return;
       tableData = tableData.filter(r => r._id !== id);
       renderBody();
     }
 
-    // --- Yardımcılar ---
+    // --- Helpers ---
 
     function createIconBtn(iconClass, btnClass, onClick) {
       const btn = document.createElement("button");
@@ -400,7 +397,7 @@
       return ['active','sold','pending','available','rejected','accepted'].some(x => s.includes(x));
     }
 
-    // Basit CSV Parçalayıcı (Tırnak içindeki virgülleri yoksayar)
+    // Simple CSV Parser (ignores commas inside quotes)
     function splitCSV(str) {
       const arr = [];
       let quote = false;
@@ -414,7 +411,7 @@
       return arr.map(x => x.trim());
     }
 
-    // --- CSV İndirme (Export) ---
+    // --- Export CSV ---
     function downloadCSV() {
       // 1. Header
       let csvContent = originalHeader.join(",") + "\n";
@@ -423,14 +420,14 @@
       tableData.forEach(row => {
         const rowArr = originalHeader.map((_, idx) => {
           let val = row[idx] || "";
-          // Eğer virgül varsa tırnak içine al
+          // Wrap in quotes if it contains a comma
           if (val.includes(",")) val = `"${val}"`;
           return val;
         });
         csvContent += rowArr.join(",") + "\n";
       });
 
-      // 3. Blob Oluştur ve İndir
+      // 3. Create Blob and Download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
