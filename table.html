@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Table Viewer</title>
+  <title>Gelişmiş Tablo Yöneticisi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
     :root{
       --bg:#0b1220; --panel:#0f1a33; --text:#e9eefc; --muted:#a8b3d6;
-      --line:rgba(255,255,255,.10); --accent:#4f8cff;
+      --line:rgba(255,255,255,.10); --accent:#4f8cff; --danger:#ff6b6b; --success:#2ee59d;
       --chip:rgba(255,255,255,.06);
     }
     *{box-sizing:border-box}
@@ -19,103 +21,143 @@
       background: radial-gradient(1200px 600px at 20% 0%, #162a58 0%, var(--bg) 55%) fixed;
       color:var(--text);
     }
-    .wrap{max-width:1200px; margin:0 auto; padding:20px 16px 60px;}
+    .wrap{max-width:95%; margin:0 auto; padding:20px 0 60px;}
+    
+    /* Toolbar */
     .bar{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:14px 14px; border:1px solid var(--line);
+      padding:14px 18px; border:1px solid var(--line);
       background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-      border-radius:16px;
-      position: sticky; top: 12px; z-index: 10;
-      backdrop-filter: blur(8px);
+      border-radius:16px; margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+      flex-wrap: wrap;
     }
-    .left{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
-    .title{font-weight:800; letter-spacing:.2px}
-    .chip{
-      padding:6px 10px; border-radius:999px; border:1px solid var(--line);
-      background: var(--chip); color:var(--muted); font-size:12px;
-    }
-    .search{
-      display:flex; align-items:center; gap:8px;
-      border:1px solid var(--line); background:rgba(0,0,0,.18);
-      padding:8px 10px; border-radius:12px;
-      min-width:260px;
-    }
-    .search input{
-      width:100%; background:transparent; border:none; outline:none;
-      color:var(--text); font-size:13px;
-    }
-    .btn{
+    .left, .right { display:flex; align-items:center; gap:12px; }
+    .title { font-weight:800; font-size: 1.2rem; letter-spacing:.5px; color: #fff; }
+    
+    /* Buttons */
+    .btn {
+      display:inline-flex; align-items:center; gap:8px;
       text-decoration:none; color:var(--text);
-      padding:8px 10px; border-radius:12px;
+      padding:8px 14px; border-radius:8px;
       border:1px solid var(--line); background:rgba(255,255,255,.04);
-      font-weight:600; font-size:13px;
+      font-weight:600; font-size:13px; cursor: pointer;
+      transition: all 0.2s;
     }
-    .btn:hover{border-color:rgba(79,140,255,.5)}
+    .btn:hover { background: rgba(255,255,255,.1); border-color: var(--accent); }
+    .btn-primary { background: rgba(79,140,255,.15); border-color: rgba(79,140,255,.4); color: #8ab4ff; }
+    .btn-primary:hover { background: rgba(79,140,255,.25); }
+    .btn-danger { color: var(--danger); border-color: rgba(255,107,107,.3); background: rgba(255,107,107,.1); }
+    .btn-danger:hover { background: rgba(255,107,107,.2); }
+
+    /* Table Container */
     .panel{
-      margin-top:14px;
       border:1px solid var(--line);
       background: rgba(15,26,51,.55);
       border-radius:16px;
       overflow:hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     }
-    .table-wrap{overflow:auto;}
-    table{border-collapse:collapse; width:100%; min-width:900px;}
+    .table-wrap{overflow-x:auto; min-height: 300px;}
+    table{border-collapse:collapse; width:100%; min-width:1000px;}
+    
+    /* Headers */
     thead th{
-      position: sticky; top: 0;
-      background: rgba(10,18,32,.95);
+      position: sticky; top: 0; z-index: 5;
+      background: #131d36;
       border-bottom:1px solid var(--line);
-      padding:10px 10px;
-      text-align:left; font-size:12px; color:var(--muted);
-      cursor:pointer;
+      padding:12px 10px;
+      text-align:left; font-size:13px; color:var(--accent);
       white-space:nowrap;
     }
+    
+    /* Filter Inputs in Header */
+    .filter-row th {
+      top: 45px; /* Height of the first header row */
+      background: #0f182d;
+      padding: 6px;
+    }
+    .filter-input {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+    }
+    .filter-input:focus { border-color: var(--accent); }
+
+    /* Cells */
     tbody td{
-      border-top:1px solid rgba(255,255,255,.06);
+      border-top:1px solid rgba(255,255,255,.04);
       padding:10px 10px;
       font-size:13px;
       white-space:nowrap;
+      color: var(--muted);
+      vertical-align: middle;
     }
-    tbody tr:nth-child(even){background: rgba(255,255,255,.02);}
-    .hint{color:var(--muted); font-size:12px; padding:12px 14px; border-top:1px solid var(--line);}
-    .status{
-      display:inline-flex; align-items:center;
-      padding:4px 10px; border-radius:999px; font-size:12px; font-weight:800;
-      border:1px solid rgba(255,255,255,.14);
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    
+    /* Input Mode (Editing) */
+    .edit-input {
+      background: rgba(0,0,0,0.4); border: 1px solid var(--accent);
+      color: white; padding: 6px; border-radius: 4px; width: 100%;
     }
-    .s-Available{color:#2ee59d; background:rgba(46,229,157,.10); border-color:rgba(46,229,157,.25);}
-    .s-Active{color:#4f8cff; background:rgba(79,140,255,.10); border-color:rgba(79,140,255,.25);}
-    .s-Sold{color:#ff6b6b; background:rgba(255,107,107,.10); border-color:rgba(255,107,107,.25);}
-    .s-Under{color:#f7d046; background:rgba(247,208,70,.10); border-color:rgba(247,208,70,.25);}
+
+    /* Actions Column */
+    .actions { display: flex; gap: 6px; }
+    .icon-btn {
+      padding: 6px; border-radius: 6px; border:none; cursor: pointer;
+      font-size: 14px; transition: 0.2s;
+    }
+    .btn-edit { background: rgba(79,140,255,.15); color: var(--accent); }
+    .btn-delete { background: rgba(255,107,107,.15); color: var(--danger); }
+    .btn-save { background: rgba(46,229,157,.15); color: var(--success); }
+    .btn-cancel { background: rgba(255,255,255,.1); color: var(--muted); }
+    
+    .icon-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
+
+    .status-badge {
+      padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="bar">
       <div class="left">
-        <div class="title" id="tableTitle">Table</div>
-        <div class="chip" id="rowCount">0 rows</div>
-        <div class="search">
-          <span style="color:var(--muted)">🔎</span>
-          <input id="q" placeholder="Search in table (any column)..." />
-        </div>
+        <div class="title" id="tableTitle">YÜKLENİYOR...</div>
+        <span style="color:var(--muted); font-size:13px;" id="recordCount">0 kayıt</span>
       </div>
-      <div class="right" style="display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="btn" href="./">← Home</a>
-        <a class="btn" id="downloadBtn" href="#" download>Download CSV</a>
+      <div class="right">
+        <button class="btn" onclick="addNewRow()"><i class="fa-solid fa-plus"></i> Yeni Ekle</button>
+        <button class="btn btn-primary" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> CSV Olarak İndir (Kaydet)</button>
+        <a class="btn" href="./"><i class="fa-solid fa-home"></i> Ana Menü</a>
       </div>
     </div>
 
     <div class="panel">
       <div class="table-wrap">
-        <table id="tbl"></table>
+        <table id="mainTable">
+          <thead>
+            <tr id="headerRow"></tr>
+            <tr id="filterRow" class="filter-row"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
       </div>
-      <div class="hint">
-        Click a column header to sort. Search filters all columns. (Works great for Status like Available/Sold/Active.)
-      </div>
+    </div>
+    
+    <div style="margin-top:10px; font-size:12px; color:var(--muted); text-align:center;">
+      <i class="fa-solid fa-info-circle"></i> Not: Bu statik bir sitedir. Değişiklik yaptıktan sonra "CSV İndir" butonuna basıp dosyayı projenizdeki <b>data/</b> klasörüne manuel olarak kaydetmelisiniz.
     </div>
   </div>
 
   <script>
+    // --- Yapılandırma ---
     const FILE_MAP = {
       property: "data/property.csv",
       client:   "data/client.csv",
@@ -127,144 +169,277 @@
     };
 
     const params = new URLSearchParams(location.search);
-    const t = (params.get("t") || "property").toLowerCase();
-    const csvPath = FILE_MAP[t] || FILE_MAP.property;
+    const tableName = (params.get("t") || "property").toLowerCase();
+    const csvPath = FILE_MAP[tableName] || FILE_MAP.property;
 
-    document.getElementById("tableTitle").textContent = t.toUpperCase();
-    const downloadBtn = document.getElementById("downloadBtn");
-    downloadBtn.href = csvPath;
-    downloadBtn.download = `${t}.csv`;
+    document.getElementById("tableTitle").textContent = tableName.toUpperCase();
+    document.title = `${tableName.toUpperCase()} - Yönetici`;
 
-    let header = [];
-    let rows = [];
-    let filtered = [];
-    let sortState = { col: -1, asc: true };
+    // --- State (Durum Yönetimi) ---
+    let originalHeader = [];
+    let tableData = []; // [{col1: val, col2: val, _id: 1}, ...]
+    let filters = {};   // { colIndex: "arama terimi" }
+    let editingRowId = null; 
 
+    // --- Başlatma ---
     fetch(csvPath)
       .then(r => {
-        if (!r.ok) throw new Error("CSV not found: " + csvPath);
+        if(!r.ok) throw new Error("Dosya bulunamadı");
         return r.text();
       })
-      .then(text => {
-        const parsed = parseCSV(text);
-        header = parsed.header;
-        rows = parsed.rows;
-        filtered = rows.slice();
-        renderTable(filtered);
-        updateCount(filtered.length);
+      .then(csvText => {
+        parseAndInit(csvText);
       })
-      .catch(err => {
-        document.getElementById("tbl").innerHTML =
-          `<tr><td style="padding:14px;color:#ffb3b3">Error: ${err.message}<br>
-          Make sure CSV files exist and paths match (example: ${csvPath}).</td></tr>`;
-      });
+      .catch(err => alert("Hata: " + err.message));
 
-    document.getElementById("q").addEventListener("input", e => {
-      const q = e.target.value.trim().toLowerCase();
-      filtered = rows.filter(r => r.some(c => (c ?? "").toLowerCase().includes(q)));
-      if (sortState.col >= 0) filtered.sort((a,b)=>cmp(a,b,sortState.col,sortState.asc));
-      renderTable(filtered);
-      updateCount(filtered.length);
-    });
+    // --- CSV Parse İşlemleri ---
+    function parseAndInit(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length === 0) return;
 
-    function updateCount(n){
-      document.getElementById("rowCount").textContent = `${n} rows`;
+      originalHeader = splitCSV(lines[0]);
+      
+      // Veriyi objeye çevir
+      tableData = [];
+      for(let i=1; i<lines.length; i++) {
+        if(!lines[i].trim()) continue;
+        const vals = splitCSV(lines[i]);
+        const rowObj = { _id: Date.now() + Math.random() }; // Unique ID for frontend tracking
+        originalHeader.forEach((h, idx) => {
+          rowObj[idx] = vals[idx] || "";
+        });
+        tableData.push(rowObj);
+      }
+
+      renderHeader();
+      renderFilters();
+      renderBody();
     }
 
-    function renderTable(data){
-      const tbl = document.getElementById("tbl");
-      const thead = document.createElement("thead");
-      const trh = document.createElement("tr");
-      header.forEach((h, i) => {
+    // --- Render (Çizim) Fonksiyonları ---
+    function renderHeader() {
+      const tr = document.getElementById("headerRow");
+      tr.innerHTML = "";
+      
+      // Data Columns
+      originalHeader.forEach(h => {
         const th = document.createElement("th");
         th.textContent = h;
-        th.onclick = () => {
-          sortState.asc = (sortState.col === i) ? !sortState.asc : true;
-          sortState.col = i;
-          data.sort((a,b)=>cmp(a,b,i,sortState.asc));
-          renderTable(data);
-        };
-        trh.appendChild(th);
+        tr.appendChild(th);
       });
-      thead.appendChild(trh);
 
-      const tbody = document.createElement("tbody");
-      data.forEach(r => {
+      // Actions Column
+      const thAction = document.createElement("th");
+      thAction.textContent = "İşlemler";
+      thAction.style.width = "100px";
+      thAction.style.textAlign = "right";
+      tr.appendChild(thAction);
+    }
+
+    function renderFilters() {
+      const tr = document.getElementById("filterRow");
+      tr.innerHTML = "";
+
+      originalHeader.forEach((h, idx) => {
+        const th = document.createElement("th");
+        const input = document.createElement("input");
+        input.className = "filter-input";
+        input.placeholder = `${h} ara...`;
+        input.oninput = (e) => {
+          filters[idx] = e.target.value.toLowerCase();
+          renderBody();
+        };
+        th.appendChild(input);
+        tr.appendChild(th);
+      });
+
+      // Empty cell for actions column filter
+      tr.appendChild(document.createElement("th"));
+    }
+
+    function renderBody() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      // Filtreleme Mantığı
+      const filtered = tableData.filter(row => {
+        return Object.keys(filters).every(colIdx => {
+          const val = (row[colIdx] || "").toString().toLowerCase();
+          const term = filters[colIdx];
+          return !term || val.includes(term);
+        });
+      });
+
+      document.getElementById("recordCount").textContent = `${filtered.length} kayıt`;
+
+      filtered.forEach(row => {
         const tr = document.createElement("tr");
-        r.forEach((cell, idx) => {
+        const isEditing = (row._id === editingRowId);
+
+        // Sütunlar
+        originalHeader.forEach((colName, colIdx) => {
           const td = document.createElement("td");
-          const val = cell ?? "";
-          // Pretty status pills for common status columns
-          if (typeof val === "string" && looksLikeStatus(val)) {
-            const span = document.createElement("span");
-            span.className = "status " + statusClass(val);
-            span.textContent = val;
-            td.appendChild(span);
+          const val = row[colIdx];
+
+          if (isEditing) {
+            const input = document.createElement("input");
+            input.className = "edit-input";
+            input.value = val;
+            input.dataset.colIdx = colIdx; // Hangi sütun olduğunu sakla
+            td.appendChild(input);
           } else {
-            td.textContent = val;
+            // Normal Görünüm (Status renklendirme vb.)
+            if (looksLikeStatus(val)) {
+              const span = document.createElement("span");
+              span.className = "status-badge";
+              span.style.cssText = getStatusStyle(val);
+              span.textContent = val;
+              td.appendChild(span);
+            } else {
+              td.textContent = val;
+            }
           }
           tr.appendChild(td);
         });
+
+        // Aksiyon Butonları
+        const tdAction = document.createElement("td");
+        tdAction.className = "actions";
+        tdAction.style.justifyContent = "flex-end";
+
+        if (isEditing) {
+          // Kaydet Butonu
+          const btnSave = createIconBtn("fa-check", "btn-save", () => saveRow(row._id, tr));
+          // İptal Butonu
+          const btnCancel = createIconBtn("fa-xmark", "btn-cancel", () => cancelEdit());
+          tdAction.append(btnSave, btnCancel);
+        } else {
+          // Düzenle Butonu
+          const btnEdit = createIconBtn("fa-pen", "btn-edit", () => startEdit(row._id));
+          // Sil Butonu
+          const btnDel = createIconBtn("fa-trash", "btn-delete", () => deleteRow(row._id));
+          tdAction.append(btnEdit, btnDel);
+        }
+
+        tr.appendChild(tdAction);
         tbody.appendChild(tr);
       });
-
-      tbl.innerHTML = "";
-      tbl.appendChild(thead);
-      tbl.appendChild(tbody);
     }
 
-    function cmp(a,b,i,asc){
-      const A = (a[i] ?? "").toString();
-      const B = (b[i] ?? "").toString();
-      // numeric compare if both look numeric
-      const nA = Number(A.replace(/[^0-9.\-]/g,""));
-      const nB = Number(B.replace(/[^0-9.\-]/g,""));
-      const bothNum = !Number.isNaN(nA) && !Number.isNaN(nB) && A.trim()!=="" && B.trim()!=="";
-      const res = bothNum ? (nA - nB) : A.localeCompare(B, undefined, {numeric:true, sensitivity:"base"});
-      return asc ? res : -res;
+    // --- CRUD Mantığı ---
+    
+    function addNewRow() {
+      // Boş bir satır oluştur
+      const newRow = { _id: Date.now() };
+      originalHeader.forEach((h, i) => newRow[i] = "");
+      
+      // Başa ekle
+      tableData.unshift(newRow);
+      
+      // Direkt düzenleme moduna al
+      editingRowId = newRow._id;
+      
+      // Filtreleri temizle ki yeni satır görünsün
+      filters = {}; 
+      document.querySelectorAll(".filter-input").forEach(i => i.value = "");
+      
+      renderBody();
     }
 
-    function looksLikeStatus(v){
-      const s = v.toLowerCase();
-      return ["available","sold","active","expired","cancelled","rejected","accepted","pending","withdrawn","under contract","off market"]
-        .some(x => s === x);
-    }
-    function statusClass(v){
-      const s = v.toLowerCase();
-      if (s === "available") return "s-Available";
-      if (s === "active" || s === "pending") return "s-Active";
-      if (s === "sold" || s === "accepted") return "s-Sold";
-      if (s.startsWith("under")) return "s-Under";
-      return "";
+    function startEdit(id) {
+      editingRowId = id;
+      renderBody();
     }
 
-    // Minimal CSV parser with quoted fields support
-    function parseCSV(text){
-      const lines = text.trim().split(/\r?\n/);
-      const header = splitCSVLine(lines[0]);
-      const rows = [];
-      for(let i=1;i<lines.length;i++){
-        const line = lines[i];
-        if (!line.trim()) continue;
-        const cols = splitCSVLine(line);
-        // pad if short
-        while(cols.length < header.length) cols.push("");
-        rows.push(cols);
+    function cancelEdit() {
+      // Eğer yeni eklenmiş boş bir satırsa ve iptal edildiyse, satırı silmeli miyiz? 
+      // Basitlik adına sadece düzenlemeyi kapatıyoruz, eski değerler geri geliyor.
+      editingRowId = null;
+      renderBody();
+    }
+
+    function saveRow(id, trElement) {
+      const inputs = trElement.querySelectorAll("input.edit-input");
+      const targetRow = tableData.find(r => r._id === id);
+      
+      inputs.forEach(input => {
+        const colIdx = input.dataset.colIdx;
+        targetRow[colIdx] = input.value; // Veriyi güncelle
+      });
+
+      editingRowId = null;
+      renderBody();
+    }
+
+    function deleteRow(id) {
+      if(!confirm("Bu satırı silmek istediğinize emin misiniz?")) return;
+      tableData = tableData.filter(r => r._id !== id);
+      renderBody();
+    }
+
+    // --- Yardımcılar ---
+
+    function createIconBtn(iconClass, btnClass, onClick) {
+      const btn = document.createElement("button");
+      btn.className = `icon-btn ${btnClass}`;
+      btn.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+      btn.onclick = onClick;
+      return btn;
+    }
+
+    function getStatusStyle(status) {
+      const s = status.toLowerCase();
+      if(s === 'active' || s === 'available') return "background: rgba(46,229,157,.15); color: #2ee59d; border: 1px solid rgba(46,229,157,.3);";
+      if(s === 'sold' || s === 'rejected') return "background: rgba(255,107,107,.15); color: #ff6b6b; border: 1px solid rgba(255,107,107,.3);";
+      if(s.includes('under') || s === 'pending') return "background: rgba(255,200,87,.15); color: #ffc857; border: 1px solid rgba(255,200,87,.3);";
+      return "background: rgba(255,255,255,.1); color: #ccc;";
+    }
+
+    function looksLikeStatus(val) {
+      const s = (val||"").toString().toLowerCase();
+      return ['active','sold','pending','available','rejected','accepted'].some(x => s.includes(x));
+    }
+
+    // Basit CSV Parçalayıcı (Tırnak içindeki virgülleri yoksayar)
+    function splitCSV(str) {
+      const arr = [];
+      let quote = false;
+      let col = "";
+      for(let c of str) {
+        if(c === '"') { quote = !quote; continue; }
+        if(c === ',' && !quote) { arr.push(col); col = ""; continue; }
+        col += c;
       }
-      return { header, rows };
+      arr.push(col);
+      return arr.map(x => x.trim());
     }
-    function splitCSVLine(line){
-      const out = [];
-      let cur = "";
-      let inQ = false;
-      for(let i=0;i<line.length;i++){
-        const ch = line[i];
-        if (ch === '"'){ inQ = !inQ; continue; }
-        if (ch === "," && !inQ){ out.push(cur); cur=""; }
-        else cur += ch;
-      }
-      out.push(cur);
-      return out.map(s => s.trim());
+
+    // --- CSV İndirme (Export) ---
+    function downloadCSV() {
+      // 1. Header
+      let csvContent = originalHeader.join(",") + "\n";
+
+      // 2. Rows
+      tableData.forEach(row => {
+        const rowArr = originalHeader.map((_, idx) => {
+          let val = row[idx] || "";
+          // Eğer virgül varsa tırnak içine al
+          if (val.includes(",")) val = `"${val}"`;
+          return val;
+        });
+        csvContent += rowArr.join(",") + "\n";
+      });
+
+      // 3. Blob Oluştur ve İndir
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${tableName}_updated.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
